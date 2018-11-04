@@ -2,11 +2,13 @@ from django.shortcuts import render
 from rest_framework import generics
 from django.http import HttpResponse, JsonResponse
 from dashboard.models import Ride, RideDriver
+from customer.models import Customer
 from datetime import datetime
+from django.utils import timezone
 from django.core.exceptions import ObjectDoesNotExist
 
 # Create your views here.
-class Ride(generics.GenericAPIView):
+class Rides(generics.GenericAPIView):
 
     def post(self, request, *args, **kwargs):
         data = request.data
@@ -16,8 +18,8 @@ class Ride(generics.GenericAPIView):
             long = data['long']
 
             ride = Ride()
+            ride.customer = Customer.objects.get(id=customer_id)
 
-            ride.customer = customer_id
             ride.createts = datetime.now()
             ride.lat = lat
             ride.long = long
@@ -27,7 +29,10 @@ class Ride(generics.GenericAPIView):
             return JsonResponse({'code': '200', 'message': 'ok'}, status=200)
 
         except KeyError as e:
-            return JsonResponse({'code': '405', 'message': 'Method Not Allowed'}, status=405)
+            return JsonResponse({'code': '400', 'message': 'Bad Request'}, status=400)
+
+        except ObjectDoesNotExist as e:
+                return JsonResponse({'code': '400', 'message': 'Customer Does Not Exist'}, status=400)
 
         except Exception as e:
             print(e)
@@ -44,7 +49,7 @@ class Ride(generics.GenericAPIView):
                 resp.append({
                     'id':ride.id,
                     'customer_id':ride.customer_id,
-                    'time_elapsed':datetime.now()- ride.createts,
+                    'time_elapsed':(timezone.now() - ride.createts).__str__(),
                     'status':status,
                     'driver':drive_status.driver_id.id
                 })
@@ -52,7 +57,7 @@ class Ride(generics.GenericAPIView):
                 resp.append({
                     'id':ride.id,
                     'customer_id':ride.customer_id,
-                    'time_elapsed':datetime.now()- ride.createts,
+                    'time_elapsed':(timezone.now()- ride.createts).__str__(),
                     'status':'Waiting',
                     'driver':'None'
                 })
